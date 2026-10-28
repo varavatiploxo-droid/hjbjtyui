@@ -1,0 +1,912 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Тихий обмен — файлы</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111512;
+      --panel: #171e1a;
+      --line: #2b352e;
+      --text: #e5ece6;
+      --muted: #87938a;
+      --green: #bad9c3;
+      --red: #e68f8f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.5 Inter, system-ui, -apple-system, sans-serif;
+    }
+
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .sidebar {
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 230px;
+      padding: 24px 16px 14px;
+      border-right: 1px solid var(--line);
+      background: #141a16;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .logo { margin: 0 0 34px; font-size: 15px; font-weight: 700; }
+    .logo span, .accent { color: var(--green); }
+    .label { margin: 0 0 10px 9px; color: #78847b; font-size: 9px; letter-spacing: 1.2px; }
+
+    .nav { display: grid; gap: 5px; }
+    .nav button {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: #aeb9b0;
+      text-align: left;
+      font-size: 12px;
+    }
+    .nav button:hover, .nav button.active { background: #222b25; color: var(--text); }
+    .count { color: #829087; font-size: 10px; }
+
+    .sidebar-bottom { margin-top: auto; }
+    .note {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .note strong { color: #cbd8ce; font-size: 11px; }
+    .note p { margin: 5px 0 0; }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 15px;
+      padding: 12px 2px 0;
+      border-top: 1px solid var(--line);
+    }
+    .avatar {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: #29352d;
+      color: var(--green);
+    }
+    .profile-text { min-width: 0; flex: 1; }
+    .profile-text strong, .profile-text small {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .profile-text strong { font-size: 11px; }
+    .profile-text small { color: var(--muted); font-size: 9px; }
+    #accountButton { border: 0; background: transparent; color: var(--muted); }
+
+    main { min-height: 100vh; margin-left: 230px; }
+    .topbar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 34px;
+      border-bottom: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 10px;
+    }
+    .topbar b { color: #cbd5cd; font-weight: 500; }
+
+    .content { max-width: 1100px; margin: 0 auto; padding: 43px 34px 26px; }
+    .heading {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 27px;
+    }
+    .eyebrow { color: #849187; font-size: 9px; letter-spacing: 1.5px; }
+    h1 { margin: 7px 0 5px; font-size: 34px; font-weight: 500; letter-spacing: -1.2px; }
+    .subtitle { margin: 0; color: var(--muted); font-size: 11px; }
+
+    .primary, .secondary {
+      min-height: 36px;
+      padding: 0 13px;
+      border: 1px solid #698170;
+      border-radius: 6px;
+      background: #b9d7c1;
+      color: #172019;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .primary:hover { background: #c9e3d0; }
+    .secondary {
+      min-height: 33px;
+      border-color: #3a483e;
+      background: #202a23;
+      color: #c9ddce;
+    }
+
+    .drop {
+      min-height: 125px;
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding: 20px;
+      border: 1px dashed #405046;
+      border-radius: 8px;
+      background: #151b17;
+      cursor: pointer;
+    }
+    .drop.drag { border-color: var(--green); background: #1b261e; }
+    .upload-icon {
+      width: 40px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #354239;
+      border-radius: 8px;
+      color: var(--green);
+      font-size: 20px;
+    }
+    .drop strong { font-size: 12px; }
+    .drop p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+    .text-button {
+      padding: 0;
+      border: 0;
+      background: none;
+      color: #c2ddca;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .hint { margin-left: auto; color: #78877c; font-size: 9px; letter-spacing: .8px; }
+
+    .section-head {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 15px;
+      margin: 38px 0 17px;
+    }
+    h2 { margin: 0 0 5px; font-size: 16px; }
+    .section-head p { margin: 0; color: var(--muted); font-size: 11px; }
+    .tools { display: flex; gap: 8px; }
+    .search {
+      width: 200px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 9px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #141917;
+    }
+    .search span { color: #879188; font-size: 17px; }
+    .search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 11px; }
+    .search input::placeholder { color: #748078; }
+    .sort {
+      height: 34px;
+      padding: 0 10px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #141917;
+      color: #b2bcb4;
+      font-size: 10px;
+    }
+
+    .table-head, .row {
+      display: grid;
+      grid-template-columns: minmax(190px, 1.8fr) minmax(90px, .8fr) 85px 100px 140px;
+      gap: 10px;
+      align-items: center;
+    }
+    .table-head {
+      min-height: 38px;
+      border-top: 1px solid var(--line);
+      color: #76827a;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: .7px;
+    }
+    .row { min-height: 65px; border-top: 1px solid #242d27; }
+    .file { min-width: 0; display: flex; align-items: center; gap: 10px; }
+    .file-icon {
+      width: 36px;
+      height: 38px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border: 1px solid #425047;
+      border-radius: 7px;
+      background: #202923;
+      color: #c4d9ca;
+      font-size: 16px;
+    }
+    .file-name { min-width: 0; }
+    .file-name strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .file-name small {
+      display: block;
+      margin-top: 4px;
+      overflow: hidden;
+      color: #7d8981;
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .owner { overflow: hidden; color: #adb7af; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .meta { color: #9ca69e; font-size: 10px; }
+    .actions { display: flex; justify-content: flex-end; gap: 5px; }
+    .action {
+      min-height: 29px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 8px;
+      border: 1px solid #354039;
+      border-radius: 5px;
+      background: #1a201d;
+      color: #c0cbc2;
+      font-size: 10px;
+      text-decoration: none;
+    }
+    .action:hover { border-color: #738b79; }
+    .action.delete { width: 30px; padding: 0; color: var(--red); font-size: 15px; }
+
+    .empty { display: none; padding: 48px 15px; color: var(--muted); text-align: center; }
+    .empty.show { display: block; }
+    .empty strong { display: block; margin: 10px 0 5px; color: var(--text); font-size: 14px; }
+    .empty p { margin: 0 0 14px; font-size: 11px; }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 40px;
+      padding-top: 13px;
+      border-top: 1px solid var(--line);
+      color: #6f7b73;
+      font-size: 10px;
+    }
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      max-width: calc(100vw - 40px);
+      padding: 12px 15px;
+      border: 1px solid #425247;
+      border-radius: 8px;
+      background: #202a23;
+      color: #e1eee4;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: .2s;
+      pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    dialog {
+      width: min(420px, calc(100% - 30px));
+      padding: 22px;
+      border: 1px solid #3a443d;
+      border-radius: 11px;
+      background: #171e1a;
+      color: var(--text);
+    }
+    dialog::backdrop { background: #000a; }
+    dialog h2 { margin: 0 0 7px; }
+    dialog p { color: var(--muted); font-size: 12px; line-height: 1.6; }
+    dialog label { display: block; margin: 12px 0 5px; color: #aeb9b0; font-size: 11px; }
+    dialog input {
+      width: 100%;
+      height: 39px;
+      padding: 0 10px;
+      border: 1px solid #39443c;
+      border-radius: 6px;
+      background: #111714;
+      color: var(--text);
+    }
+    .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .file-dialog-actions { justify-content: space-between; }
+    .file-dialog-actions > div { display: flex; gap: 8px; }
+
+    @media (max-width: 760px) {
+      .sidebar {
+        position: static;
+        width: 100%;
+        height: auto;
+        padding: 13px 15px 8px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .logo { margin: 0 0 12px; }
+      .label, .note { display: none; }
+      .nav { display: flex; overflow: auto; }
+      .nav button { width: auto; flex: none; padding: 9px; white-space: nowrap; }
+      .sidebar-bottom { display: none; }
+      main { margin-left: 0; }
+      .topbar { height: 49px; padding: 0 17px; }
+      .content { padding: 30px 17px 20px; }
+      .heading { align-items: flex-start; flex-direction: column; }
+      h1 { font-size: 29px; }
+      .drop { min-height: 112px; padding: 16px; }
+      .hint { display: none; }
+      .section-head { align-items: flex-start; flex-direction: column; }
+      .tools { width: 100%; }
+      .search { flex: 1; }
+      .table-head { display: none; }
+      .row { grid-template-columns: minmax(0, 1fr) auto; gap: 5px; padding: 10px 0; }
+      .file { grid-column: 1; }
+      .owner { grid-column: 1; margin: -4px 0 0 46px; }
+      .meta { display: none; }
+      .actions { grid-column: 2; grid-row: 1 / span 2; }
+      .footer { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="logo">↗ тихий обмен<span>.</span></div>
+    <div class="label">ПРОСТРАНСТВО</div>
+
+    <nav class="nav">
+      <button class="active" data-tab="all">▦ Все файлы <span class="count" id="countAll">0</span></button>
+      <button data-tab="mine">◷ Мои файлы <span class="count" id="countMine">0</span></button>
+      <button data-tab="others">♧ Чужие файлы <span class="count" id="countOthers">0</span></button>
+    </nav>
+
+    <div class="sidebar-bottom">
+      <div class="note">
+        <strong>Общее хранилище</strong>
+        <p>Загружайте файлы в «Мои файлы». Чужие файлы можно только смотреть и скачивать.</p>
+      </div>
+      <div class="profile">
+        <div class="avatar" id="avatar">?</div>
+        <div class="profile-text">
+          <strong id="profileName">Не выполнен вход</strong>
+          <small id="profileEmail">Войдите, чтобы видеть свои файлы</small>
+        </div>
+        <button id="accountButton" title="Войти или выйти">···</button>
+      </div>
+    </div>
+  </aside>
+
+  <main>
+    <header class="topbar">
+      <div>Пространство　/　<b id="crumb">Все файлы</b></div>
+      <div>Серверное хранилище</div>
+    </header>
+
+    <div class="content">
+      <section class="heading">
+        <div>
+          <div class="eyebrow">ОБМЕН ФАЙЛАМИ</div>
+          <h1 id="title">Все файлы<span class="accent">.</span></h1>
+          <p class="subtitle" id="subtitle">Просматривайте файлы или загружайте свои.</p>
+        </div>
+        <button class="primary" id="addButton">＋ Добавить файлы</button>
+      </section>
+
+      <section class="drop" id="drop">
+        <div class="upload-icon">↑</div>
+        <div>
+          <strong>Перетащите файлы сюда</strong>
+          <p>или <button class="text-button" id="browse">выберите на устройстве</button></p>
+        </div>
+        <div class="hint">ФАЙЛЫ ПОЯВЯТСЯ В «МОИХ ФАЙЛАХ»</div>
+      </section>
+      <input id="picker" type="file" multiple hidden>
+
+      <section>
+        <div class="section-head">
+          <div>
+            <h2 id="listTitle">Недавно добавлены</h2>
+            <p id="listSubtitle">Общее серверное хранилище</p>
+          </div>
+          <div class="tools">
+            <label class="search"><span>⌕</span><input id="search" placeholder="Поиск файлов"></label>
+            <button class="sort" id="sort">Сначала новые　⌄</button>
+          </div>
+        </div>
+
+        <div class="table-head">
+          <span>НАЗВАНИЕ</span><span>ЗАГРУЗИЛ</span><span>РАЗМЕР</span><span>ДАТА</span><span></span>
+        </div>
+        <div id="list"></div>
+        <div class="empty" id="empty">
+          <div style="font-size:26px">▱</div>
+          <strong>Здесь пока пусто</strong>
+          <p>Файлы появятся здесь после загрузки.</p>
+          <button class="secondary" id="emptyAdd">Добавить файл</button>
+        </div>
+        <div id="resultCount" style="padding-top:12px;color:#78847b;font-size:10px"></div>
+      </section>
+
+      <footer class="footer">
+        <span>Тихий обмен<span class="accent">.</span></span>
+        <span>Вход по почте и паролю</span>
+      </footer>
+    </div>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+  <dialog id="accountDialog">
+    <form id="accountForm">
+      <h2 id="accountTitle">Войти в аккаунт</h2>
+      <p id="accountDescription">Используйте одну и ту же почту, чтобы ваши файлы всегда определялись как ваши.</p>
+
+      <label for="accountName">Имя или ник</label>
+      <input id="accountName" maxlength="40" placeholder="Например, Аня" autocomplete="nickname" required>
+
+      <label for="accountEmail">Электронная почта</label>
+      <input id="accountEmail" type="email" maxlength="254" placeholder="name@example.com" autocomplete="email" required>
+
+      <label for="accountPassword">Пароль</label>
+      <input id="accountPassword" type="password" minlength="8" placeholder="Не менее 8 символов" autocomplete="current-password" required>
+
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelAccount">Отмена</button>
+        <button class="primary" id="accountSubmit" type="submit">Войти</button>
+      </div>
+      <p style="margin-bottom:0">Нет аккаунта? <button class="text-button" type="button" id="toggleAuth">Создать аккаунт</button></p>
+    </form>
+  </dialog>
+
+  <dialog id="renameDialog">
+    <form id="renameForm">
+      <h2>Название файла</h2>
+      <p>Введите название, которое увидят другие пользователи. Исходное имя файла останется под ним.</p>
+      <label for="customFileName">Название для списка</label>
+      <input id="customFileName" maxlength="100" placeholder="Например, Конспект по математике" required>
+      <div class="dialog-actions">
+        <button type="button" class="secondary" id="cancelRename">Отмена</button>
+        <button class="primary" type="submit">Продолжить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    (() => {
+      /*
+        Важно: логин и принадлежность файла должны проверяться сервером.
+        Пример API, которое должен реализовать ваш сервер:
+
+        POST   /api/auth/register  JSON { nickname, email, password }
+        POST   /api/auth/login     JSON { email, password }
+        POST   /api/auth/logout
+        GET    /api/auth/me
+        GET    /api/files
+        POST   /api/files          multipart/form-data: file, displayName
+        DELETE /api/files/{id}
+        GET    /api/files/{id}/download
+
+        Сервер должен хранить владельца файла по ID аккаунта (не по нику),
+        удалять и переименовывать файл может только его владелец.
+        Пароль храните только на сервере в виде безопасного хеша, не в браузере.
+      */
+      const API_BASE = "";
+      const $ = id => document.getElementById(id);
+
+      let account = null;
+      let files = [];
+      let activeTab = "all";
+      let newestFirst = true;
+      let authMode = "login";
+      let pendingFiles = [];
+      let toastTimer;
+
+      function escapeHtml(value) {
+        return String(value ?? "").replace(/[&<>"']/g, c => ({
+          "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        })[c]);
+      }
+
+      function showToast(message) {
+        $("toast").textContent = message;
+        $("toast").classList.add("show");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => $("toast").classList.remove("show"), 3500);
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(API_BASE + path, {
+          credentials: "include",
+          ...options,
+          headers: {
+            ...(options.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+            ...(options.headers || {})
+          }
+        });
+
+        if (!response.ok) {
+          let message = `Ошибка запроса (${response.status})`;
+          try {
+            const data = await response.json();
+            message = data.message || data.error || message;
+          } catch {}
+          throw new Error(message);
+        }
+
+        if (response.status === 204) return null;
+        const type = response.headers.get("content-type") || "";
+        return type.includes("application/json") ? response.json() : null;
+      }
+
+      function formatSize(bytes) {
+        bytes = Number(bytes) || 0;
+        if (bytes < 1024) return bytes + " Б";
+        if (bytes < 1048576) return (bytes / 1024).toFixed(1) + " КБ";
+        if (bytes < 1073741824) return (bytes / 1048576).toFixed(1) + " МБ";
+        return (bytes / 1073741824).toFixed(2) + " ГБ";
+      }
+
+      function isMine(file) {
+        // ownerId должен присылать сервер после проверки текущей сессии.
+        return Boolean(account && file.ownerId && String(file.ownerId) === String(account.id));
+      }
+
+      function fileKind(file) {
+        const name = String(file.originalName || file.name || "");
+        const ext = name.includes(".") ? name.split(".").pop().toLowerCase() : "";
+        const type = String(file.mimeType || file.type || "").toLowerCase();
+
+        if (type.startsWith("image/")) return ["▧", "Изображение"];
+        if (type.startsWith("video/")) return ["▶", "Видео"];
+        if (type.startsWith("audio/")) return ["♫", "Аудио"];
+        if (ext === "pdf" || type.includes("pdf")) return ["▤", "PDF-документ"];
+        if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return ["▱", "Архив"];
+        if (["doc", "docx", "odt", "rtf"].includes(ext)) return ["▤", "Документ"];
+        if (["xls", "xlsx", "csv"].includes(ext)) return ["▦", "Таблица"];
+        if (["ppt", "pptx"].includes(ext)) return ["▧", "Презентация"];
+        if (["txt", "md", "log"].includes(ext)) return ["≡", "Текстовый файл"];
+        if (["js", "ts", "html", "css", "json", "py", "java", "cpp"].includes(ext)) return ["⌘", "Файл кода"];
+        return ["▱", "Файл"];
+      }
+
+      function updateAccountDisplay() {
+        const signedIn = Boolean(account);
+        $("profileName").textContent = signedIn ? (account.nickname || account.name || "Пользователь") : "Не выполнен вход";
+        $("profileEmail").textContent = signedIn ? account.email : "Войдите, чтобы видеть свои файлы";
+        $("avatar").textContent = signedIn
+          ? String(account.nickname || account.name || account.email).slice(0, 1).toUpperCase()
+          : "?";
+        $("accountButton").title = signedIn ? "Выйти из аккаунта" : "Войти в аккаунт";
+      }
+
+      function setAuthMode(mode) {
+        authMode = mode;
+        const registering = mode === "register";
+        $("accountTitle").textContent = registering ? "Создать аккаунт" : "Войти в аккаунт";
+        $("accountSubmit").textContent = registering ? "Зарегистрироваться" : "Войти";
+        $("accountName").required = registering;
+        $("accountName").style.display = registering ? "" : "none";
+        $("toggleAuth").textContent = registering ? "Войти" : "Создать аккаунт";
+        $("accountDescription").textContent = registering
+          ? "Создайте аккаунт. Ваши файлы будут привязаны к нему и видны только в разделе «Мои файлы»."
+          : "Войдите с той же почтой и паролем, чтобы увидеть свои файлы.";
+      }
+
+      async function loadAccount() {
+        try {
+          const data = await api("/api/auth/me");
+          account = data?.user || data || null;
+          if (account && !account.id) account = null;
+        } catch {
+          account = null;
+        }
+        updateAccountDisplay();
+      }
+
+      async function loadFiles() {
+        const data = await api("/api/files");
+        files = Array.isArray(data) ? data : (Array.isArray(data?.files) ? data.files : []);
+        render();
+      }
+
+      function render() {
+        const mine = files.filter(isMine);
+        const others = files.filter(file => !isMine(file));
+
+        $("countAll").textContent = files.length;
+        $("countMine").textContent = mine.length;
+        $("countOthers").textContent = others.length;
+
+        const tabInfo = {
+          all: ["Все файлы", "Просматривайте файлы или загружайте свои.", "Недавно добавлены"],
+          mine: ["Мои файлы", "Здесь видны только файлы вашего аккаунта.", "Ваши файлы"],
+          others: ["Чужие файлы", "Чужие файлы можно только смотреть и скачивать.", "Файлы других пользователей"]
+        }[activeTab];
+
+        $("title").innerHTML = escapeHtml(tabInfo[0]) + '<span class="accent">.</span>';
+        $("subtitle").textContent = tabInfo[1];
+        $("crumb").textContent = tabInfo[0];
+        $("listTitle").textContent = tabInfo[2];
+
+        const canUpload = activeTab !== "others";
+        $("drop").style.display = canUpload ? "flex" : "none";
+        $("addButton").style.display = canUpload ? "" : "none";
+
+        document.querySelectorAll(".nav button").forEach(button => {
+          button.classList.toggle("active", button.dataset.tab === activeTab);
+        });
+
+        const query = $("search").value.trim().toLowerCase();
+        const filtered = (activeTab === "all" ? files : activeTab === "mine" ? mine : others)
+          .filter(file => {
+            const name = String(file.displayName || file.name || "").toLowerCase();
+            const original = String(file.originalName || "").toLowerCase();
+            const ownerName = String(file.ownerName || file.nickname || "").toLowerCase();
+            return name.includes(query) || original.includes(query) || ownerName.includes(query);
+          })
+          .sort((a, b) => {
+            const aTime = new Date(a.createdAt || a.created_at || 0).getTime();
+            const bTime = new Date(b.createdAt || b.created_at || 0).getTime();
+            return newestFirst ? bTime - aTime : aTime - bTime;
+          });
+
+        $("list").innerHTML = filtered.map(file => {
+          const originalName = String(file.originalName || file.name || "Файл");
+          const displayName = String(file.displayName || file.name || originalName);
+          const [icon, kind] = fileKind(file);
+          const date = new Date(file.createdAt || file.created_at || Date.now());
+          const dateText = Number.isNaN(date.getTime())
+            ? "—"
+            : date.toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" });
+
+          const downloadUrl = file.downloadUrl || file.url ||
+            (file.id ? API_BASE + "/api/files/" + encodeURIComponent(file.id) + "/download" : "#");
+
+          const deleteButton = isMine(file)
+            ? `<button class="action delete" data-delete="${escapeHtml(file.id)}" title="Удалить файл">×</button>`
+            : "";
+
+          return `<article class="row">
+            <div class="file">
+              <div class="file-icon" title="${escapeHtml(kind)}">${icon}</div>
+              <div class="file-name">
+                <strong title="${escapeHtml(displayName)}">${escapeHtml(displayName)}</strong>
+                <small title="${escapeHtml(originalName)}">${escapeHtml(kind)} · ${escapeHtml(originalName)}</small>
+              </div>
+            </div>
+            <div class="owner">${isMine(file) ? "Вы" : escapeHtml(file.ownerName || file.nickname || "Пользователь")}</div>
+            <div class="meta">${formatSize(file.size)}</div>
+            <div class="meta">${dateText}</div>
+            <div class="actions">
+              <a class="action" href="${escapeHtml(downloadUrl)}" download="${escapeHtml(originalName)}">↓ Скачать</a>
+              ${deleteButton}
+            </div>
+          </article>`;
+        }).join("");
+
+        $("empty").classList.toggle("show", filtered.length === 0);
+        $("emptyAdd").style.display = canUpload ? "" : "none";
+        $("resultCount").textContent = filtered.length ? "Файлов: " + filtered.length : "";
+      }
+
+      function openAccountDialog() {
+        setAuthMode(account ? "login" : "login");
+        $("accountDialog").showModal();
+      }
+
+      function askForFileNames(fileList) {
+        const selected = Array.from(fileList || []);
+        if (!selected.length) return;
+
+        if (!account) {
+          showToast("Сначала войдите в аккаунт, чтобы загрузить файл.");
+          openAccountDialog();
+          return;
+        }
+
+        if (activeTab === "others") {
+          showToast("В разделе «Чужие файлы» загрузка недоступна.");
+          return;
+        }
+
+        pendingFiles = selected;
+        const firstName = selected[0].name.replace(/\.[^.]+$/, "");
+        $("customFileName").value = selected.length === 1 ? firstName : `${selected.length} файлов`;
+        $("renameDialog").showModal();
+      }
+
+      async function uploadWithNames(displayName) {
+        if (!account || !pendingFiles.length) return;
+
+        try {
+          for (let index = 0; index < pendingFiles.length; index++) {
+            const file = pendingFiles[index];
+            const form = new FormData();
+            form.append("file", file);
+            form.append("displayName", pendingFiles.length === 1 ? displayName : file.name.replace(/\.[^.]+$/, ""));
+            await api("/api/files", { method: "POST", body: form });
+          }
+
+          pendingFiles = [];
+          $("picker").value = "";
+          showToast("Файл загружен в «Мои файлы».");
+          activeTab = "mine";
+          await loadFiles();
+        } catch (error) {
+          console.error(error);
+          showToast(error.message || "Не удалось загрузить файл.");
+        }
+      }
+
+      document.querySelectorAll(".nav button").forEach(button => {
+        button.addEventListener("click", () => {
+          activeTab = button.dataset.tab;
+          render();
+        });
+      });
+
+      $("search").addEventListener("input", render);
+
+      $("sort").addEventListener("click", () => {
+        newestFirst = !newestFirst;
+        $("sort").textContent = newestFirst ? "Сначала новые　⌄" : "Сначала старые　⌃";
+        render();
+      });
+
+      $("addButton").addEventListener("click", () => {
+        if (!account) return openAccountDialog();
+        $("picker").click();
+      });
+      $("browse").addEventListener("click", event => {
+        event.stopPropagation();
+        if (!account) return openAccountDialog();
+        $("picker").click();
+      });
+      $("emptyAdd").addEventListener("click", () => {
+        if (!account) return openAccountDialog();
+        $("picker").click();
+      });
+
+      $("picker").addEventListener("change", event => askForFileNames(event.target.files));
+
+      const drop = $("drop");
+      drop.addEventListener("dragover", event => {
+        event.preventDefault();
+        if (activeTab !== "others") drop.classList.add("drag");
+      });
+      drop.addEventListener("dragleave", event => {
+        if (!drop.contains(event.relatedTarget)) drop.classList.remove("drag");
+      });
+      drop.addEventListener("drop", event => {
+        event.preventDefault();
+        drop.classList.remove("drag");
+        if (activeTab === "others") {
+          showToast("В разделе «Чужие файлы» можно только скачивать файлы.");
+          return;
+        }
+        askForFileNames(event.dataTransfer.files);
+      });
+      drop.addEventListener("click", event => {
+        if (event.target.tagName !== "BUTTON") {
+          if (!account) return openAccountDialog();
+          $("picker").click();
+        }
+      });
+
+      $("renameForm").addEventListener("submit", async event => {
+        event.preventDefault();
+        const name = $("customFileName").value.trim();
+        if (!name) return;
+        $("renameDialog").close();
+        await uploadWithNames(name);
+      });
+      $("cancelRename").addEventListener("click", () => {
+        pendingFiles = [];
+        $("picker").value = "";
+        $("renameDialog").close();
+      });
+
+      $("accountButton").addEventListener("click", async () => {
+        if (!account) return openAccountDialog();
+        if (!confirm("Выйти из аккаунта?")) return;
+
+        try {
+          await api("/api/auth/logout", { method: "POST", body: "{}" });
+          account = null;
+          files = [];
+          updateAccountDisplay();
+          render();
+          showToast("Вы вышли из аккаунта.");
+        } catch (error) {
+          showToast(error.message || "Не удалось выйти.");
+        }
+      });
+
+      $("toggleAuth").addEventListener("click", () => {
+        setAuthMode(authMode === "login" ? "register" : "login");
+      });
+      $("cancelAccount").addEventListener("click", () => $("accountDialog").close());
+
+      $("accountForm").addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const email = $("accountEmail").value.trim().toLowerCase();
+        const password = $("accountPassword").value;
+        const nickname = $("accountName").value.trim();
+
+        try {
+          const endpoint = authMode === "register" ? "/api/auth/register" : "/api/auth/login";
+          const body = authMode === "register"
+            ? { nickname, email, password }
+            : { email, password };
+
+          const data = await api(endpoint, {
+            method: "POST",
+            body: JSON.stringify(body)
+          });
+
+          account = data?.user || data;
+          if (!account || !account.id) throw new Error("Сервер не вернул данные аккаунта.");
+
+          $("accountDialog").close();
+          updateAccountDisplay();
+          await loadFiles();
+          showToast("Вы вошли как " + (account.nickname || account.email) + ".");
+        } catch (error) {
+          console.error(error);
+          showToast(error.message || "Не удалось выполнить вход.");
+        }
+      });
+
+      $("list").addEventListener("click", async event => {
+        const button = event.target.closest("[data-delete]");
+        if (!button) return;
+
+        const file = files.find(item => String(item.id) === button.dataset.delete);
+        if (!file || !isMine(file)) {
+          showToast("Удалять можно только свои файлы.");
+          return;
+        }
+        if (!confirm(`Удалить «${file.displayName || file.name}»?`)) return;
+
+        try {
+          await api("/api/files/" + encodeURIComponent(file.id), { method: "DELETE" });
+          showToast("Файл удалён.");
+          await loadFiles();
+        } catch (error) {
+          showToast(error.message || "Не удалось удалить файл.");
+        }
+      });
+
+      (async () => {
+        updateAccountDisplay();
+        try {
+          await loadAccount();
+          await loadFiles();
+        } catch (error) {
+          console.error(error);
+          showToast("Не удалось подключиться к серверу. Проверьте настройку API.");
+        }
+      })();
+    })();
+  </script>
+</body>
+</html>
